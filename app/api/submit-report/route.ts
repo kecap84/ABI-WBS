@@ -36,7 +36,6 @@ export async function POST(request: NextRequest) {
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData()
       body = {
-        title: formData.get('title')?.toString(),
         description: formData.get('description')?.toString(),
         category: formData.get('category')?.toString(),
         evidenceCount: formData.get('evidenceCount')?.toString(),
@@ -48,14 +47,7 @@ export async function POST(request: NextRequest) {
       body = await request.json()
     }
 
-    const { title, description, category, evidenceCount } = body
-
-    if (!title?.trim()) {
-      return NextResponse.json(
-        { success: false, error: 'Judul laporan tidak boleh kosong' },
-        { status: 400 }
-      )
-    }
+    const { description, category, evidenceCount } = body
 
     if (!description?.trim()) {
       return NextResponse.json(
@@ -70,6 +62,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    const generatedTitle = description.trim().replace(/\s+/g, ' ').slice(0, 120)
 
     if (files.length > MAX_FILES) {
       return NextResponse.json(
@@ -103,7 +97,7 @@ export async function POST(request: NextRequest) {
     const trackingCode = generateTrackingCode()
     const reportId = nanoid()
 
-    console.log('[v0] API: Submitting report:', { title, category, trackingCode })
+    console.log('[v0] API: Submitting report:', { category, trackingCode })
 
     const uploadedPathnames: string[] = []
 
@@ -111,7 +105,7 @@ export async function POST(request: NextRequest) {
       await db.insert(reports).values({
         id: reportId,
         trackingCode,
-        title,
+        title: generatedTitle,
         description,
         category,
         severity: 'medium',

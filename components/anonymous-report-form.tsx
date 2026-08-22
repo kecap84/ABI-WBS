@@ -29,7 +29,6 @@ const CATEGORIES = [
 
 export function AnonymousReportForm() {
   const [formData, setFormData] = useState({
-    title: '',
     description: '',
     category: '',
   })
@@ -52,12 +51,6 @@ export function AnonymousReportForm() {
     setError(null)
     setLoading(true)
 
-    if (!formData.title.trim()) {
-      setError('Report title cannot be empty')
-      setLoading(false)
-      return
-    }
-
     if (!formData.description.trim()) {
       setError('Report description cannot be empty')
       setLoading(false)
@@ -72,7 +65,6 @@ export function AnonymousReportForm() {
 
     try {
       const submission = new FormData()
-      submission.append('title', formData.title)
       submission.append('description', formData.description)
       submission.append('category', formData.category)
       submission.append('evidenceCount', evidenceFiles.length.toString())
@@ -115,7 +107,6 @@ export function AnonymousReportForm() {
         )
         setSubmitted(true)
         setFormData({
-          title: '',
           description: '',
           category: '',
         })
@@ -254,24 +245,6 @@ export function AnonymousReportForm() {
             ))}
           </select>
         </div>
-      </div>
-
-      <div className="mb-6">
-        <label htmlFor="title" className="block text-sm font-semibold text-gray-900 mb-2">
-          Title <span className="text-red-600">*</span>
-        </label>
-        <input
-          id="title"
-          name="title"
-          type="text"
-          value={formData.title}
-          onChange={handleChange}
-          required
-          placeholder="Briefly summarize your feedback or report"
-          maxLength={200}
-          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 sm:text-base"
-        />
-        <p className="text-xs text-gray-500 mt-1">{formData.title.length}/200</p>
       </div>
 
       <div className="mb-6">
