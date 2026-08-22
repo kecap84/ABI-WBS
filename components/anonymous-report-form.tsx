@@ -27,22 +27,11 @@ const CATEGORIES = [
   'Other',
 ]
 
-const SEVERITIES = [
-  { value: 'low', label: 'Low - Minor issue' },
-  { value: 'medium', label: 'Medium - Important concern' },
-  { value: 'high', label: 'High - Serious matter' },
-  { value: 'critical', label: 'Critical - Urgent action needed' },
-]
-
 export function AnonymousReportForm() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     category: '',
-    severity: 'medium',
-    department: '',
-    reporterEmail: '',
-    reporterPhone: '',
   })
 
   const [loading, setLoading] = useState(false)
@@ -86,10 +75,6 @@ export function AnonymousReportForm() {
       submission.append('title', formData.title)
       submission.append('description', formData.description)
       submission.append('category', formData.category)
-      submission.append('severity', formData.severity)
-      submission.append('department', formData.department)
-      submission.append('reporterEmail', formData.reporterEmail)
-      submission.append('reporterPhone', formData.reporterPhone)
       submission.append('evidenceCount', evidenceFiles.length.toString())
 
       const response = await fetch('/api/submit-report', {
@@ -133,10 +118,6 @@ export function AnonymousReportForm() {
           title: '',
           description: '',
           category: '',
-          severity: 'medium',
-          department: '',
-          reporterEmail: '',
-          reporterPhone: '',
         })
         setEvidenceFiles([])
       } else {
@@ -191,9 +172,9 @@ export function AnonymousReportForm() {
       <div className="max-w-2xl mx-auto">
         <div className="bg-green-50 border border-green-200 rounded-lg p-6 sm:p-8 text-center">
           <CheckCircle2 className="w-16 h-16 text-green-600 mx-auto mb-4" />
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Report Received</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Submission Received</h2>
           <p className="text-gray-600 mb-6 text-sm sm:text-base">
-            Thank you for reporting your concern. Your report has been received and will be investigated professionally.
+            Thank you for speaking up. Your submission has been received and will be reviewed professionally.
           </p>
 
           <div className="bg-white border border-green-300 rounded-lg p-6 mb-6 text-left">
@@ -233,7 +214,7 @@ export function AnonymousReportForm() {
             }}
             className="bg-green-600 hover:bg-green-700 text-white px-6 sm:px-8 py-3 rounded-lg font-semibold transition text-sm sm:text-base"
           >
-            Submit Another Report
+            Submit Another
           </button>
         </div>
       </div>
@@ -241,10 +222,11 @@ export function AnonymousReportForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-2xl mx-auto">
-      <div className="mb-7 border-b border-gray-200 pb-5">
-        <h2 className="text-xl font-bold text-gray-900 sm:text-2xl">Report Details</h2>
-        <p className="mt-1 text-sm text-gray-600">Fields marked with an asterisk (*) are required.</p>
+    <form onSubmit={handleSubmit} className="mx-auto max-w-2xl">
+      <div className="mb-7">
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">Your submission</p>
+        <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950 sm:text-2xl">Tell us what you would like to share</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600">Feedback, ideas, concerns, or formal reports are all welcome.</p>
       </div>
       {error && (
         <div className="mb-6 flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -253,7 +235,7 @@ export function AnonymousReportForm() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
+      <div className="mb-6">
         <div>
           <label htmlFor="category" className="block text-sm font-semibold text-gray-900 mb-2">
             Report Category <span className="text-red-600">*</span>
@@ -264,28 +246,11 @@ export function AnonymousReportForm() {
             value={formData.category}
             onChange={handleChange}
             required
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-base text-gray-900 bg-white"
+            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 sm:text-base"
           >
             <option value="" className="text-gray-400">Select a category...</option>
             {CATEGORIES.map(cat => (
               <option key={cat} value={cat} className="text-gray-900">{cat}</option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="severity" className="block text-sm font-semibold text-gray-900 mb-2">
-            Urgency Level <span className="text-red-600">*</span>
-          </label>
-          <select
-            id="severity"
-            name="severity"
-            value={formData.severity}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-base text-gray-900 bg-white"
-          >
-            {SEVERITIES.map(sev => (
-              <option key={sev.value} value={sev.value} className="text-gray-900">{sev.label}</option>
             ))}
           </select>
         </div>
@@ -304,7 +269,7 @@ export function AnonymousReportForm() {
           required
           placeholder="Briefly summarize your feedback or report"
           maxLength={200}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-base"
+          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 sm:text-base"
         />
         <p className="text-xs text-gray-500 mt-1">{formData.title.length}/200</p>
       </div>
@@ -322,70 +287,18 @@ export function AnonymousReportForm() {
           placeholder="Describe what happened, your feedback, or your suggestion. Include dates, locations, and people when relevant."
           maxLength={5000}
           rows={8}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-base"
+          className="w-full resize-y rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 sm:text-base"
         />
         <p className="text-xs text-gray-500 mt-1">{formData.description.length}/5000</p>
       </div>
 
-      <div className="mb-4 mt-8 border-t border-gray-200 pt-6">
-        <h2 className="text-lg font-bold text-gray-900">Contact Information</h2>
-        <p className="mt-1 text-sm text-gray-600">Optional—leave these fields blank to submit anonymously.</p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
-        <div>
-          <label htmlFor="department" className="block text-sm font-semibold text-gray-900 mb-2">
-            Department/Unit (Optional)
-          </label>
-          <input
-            id="department"
-            name="department"
-            type="text"
-            value={formData.department}
-            onChange={handleChange}
-            placeholder="E.g., Finance, HR, Operations"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-base"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="reporterEmail" className="block text-sm font-semibold text-gray-900 mb-2">
-            Email (Optional)
-          </label>
-          <input
-            id="reporterEmail"
-            name="reporterEmail"
-            type="email"
-            value={formData.reporterEmail}
-            onChange={handleChange}
-            placeholder="Your email address"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-base"
-          />
-        </div>
-      </div>
-
-      <div className="mb-6">
-        <label htmlFor="reporterPhone" className="block text-sm font-semibold text-gray-900 mb-2">
-          Phone Number (Optional)
-        </label>
-        <input
-          id="reporterPhone"
-          name="reporterPhone"
-          type="tel"
-          value={formData.reporterPhone}
-          onChange={handleChange}
-          placeholder="Your phone number"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-base"
-        />
-      </div>
-
-      <div className="mb-6 mt-8 border-t border-gray-200 pt-6">
+      <div className="mb-6 mt-8 border-t border-slate-200 pt-6">
         <label htmlFor="evidence" className="block text-sm font-semibold text-gray-900 mb-2">
           Supporting Evidence (Optional)
         </label>
         <label
           htmlFor="evidence"
-          className="flex items-center justify-center gap-2 w-full px-4 py-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-green-50 hover:border-green-400 cursor-pointer transition text-gray-700"
+          className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-slate-700 transition hover:border-emerald-400 hover:bg-emerald-50"
         >
           <Paperclip className="w-5 h-5 text-green-600" />
           <span className="text-sm font-semibold">Choose images or PDF</span>
@@ -422,16 +335,16 @@ export function AnonymousReportForm() {
         )}
       </div>
 
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-        <p className="text-xs sm:text-sm text-green-800">
-          <strong>Your privacy choice:</strong> Only provide contact information if you are comfortable doing so. You can still receive updates and reply using your tracking code.
+      <div className="mb-6 rounded-xl bg-emerald-50 p-4">
+        <p className="text-xs leading-5 text-emerald-900 sm:text-sm">
+          <strong>No identity required.</strong> Save the tracking code after submitting to follow updates or reply to the review team.
         </p>
       </div>
 
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-3 px-6 rounded-lg font-semibold transition text-sm sm:text-base"
+        className="w-full rounded-xl bg-emerald-600 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-200 disabled:bg-slate-400 sm:text-base"
       >
         {loading ? 'Submitting...' : 'Submit Feedback or Report'}
       </button>

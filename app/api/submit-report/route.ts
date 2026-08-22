@@ -39,10 +39,6 @@ export async function POST(request: NextRequest) {
         title: formData.get('title')?.toString(),
         description: formData.get('description')?.toString(),
         category: formData.get('category')?.toString(),
-        severity: formData.get('severity')?.toString(),
-        department: formData.get('department')?.toString(),
-        reporterEmail: formData.get('reporterEmail')?.toString(),
-        reporterPhone: formData.get('reporterPhone')?.toString(),
         evidenceCount: formData.get('evidenceCount')?.toString(),
       }
       files = formData
@@ -52,7 +48,7 @@ export async function POST(request: NextRequest) {
       body = await request.json()
     }
 
-    const { title, description, category, severity, department, reporterEmail, reporterPhone, evidenceCount } = body
+    const { title, description, category, evidenceCount } = body
 
     if (!title?.trim()) {
       return NextResponse.json(
@@ -118,10 +114,7 @@ export async function POST(request: NextRequest) {
         title,
         description,
         category,
-        severity: severity || 'medium',
-        department: department || undefined,
-        reporterEmail: reporterEmail || undefined,
-        reporterPhone: reporterPhone || undefined,
+        severity: 'medium',
         status: 'open',
       })
 

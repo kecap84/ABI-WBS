@@ -10,8 +10,8 @@ export const metadata = {
 
 export default function SubmitPage() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-green-50 via-white to-yellow-50">
-      <header className="border-b border-green-100 bg-white/90 shadow-sm">
+    <main className="min-h-screen bg-slate-50">
+      <header className="border-b border-slate-200 bg-white/95">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
           <Link href="/" className="flex items-center gap-2.5 transition hover:opacity-90">
             <Image
@@ -41,9 +41,9 @@ export default function SubmitPage() {
                 <FileText className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-700">Employee Speak Up</p>
-                <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Share feedback or report a concern</h1>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">A secure channel for suggestions, workplace concerns, complaints, or suspected misconduct.</p>
+                <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-700">Abhitech Speak Up</p>
+                <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">What would you like to share?</h1>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">Submit feedback, an idea, a workplace concern, or a formal report—choose the category that fits best.</p>
               </div>
             </div>
           </div>
@@ -51,7 +51,7 @@ export default function SubmitPage() {
           <div className="grid border-t border-slate-100 bg-slate-50/70 sm:grid-cols-3 sm:divide-x sm:divide-slate-200">
             <div className="flex items-center gap-3 px-6 py-4 sm:px-5">
               <LockKeyhole className="h-4 w-4 flex-shrink-0 text-emerald-600" />
-              <p className="text-sm text-slate-600"><strong className="font-semibold text-slate-900">Stay anonymous</strong><br />Contact details are optional</p>
+              <p className="text-sm text-slate-600"><strong className="font-semibold text-slate-900">No identity needed</strong><br />Submit freely and securely</p>
             </div>
             <div className="flex items-center gap-3 border-t border-slate-200 px-6 py-4 sm:border-t-0 sm:px-5">
               <Paperclip className="h-4 w-4 flex-shrink-0 text-emerald-600" />
@@ -65,11 +65,11 @@ export default function SubmitPage() {
 
           <div className="flex items-center gap-2 border-t border-emerald-100 bg-emerald-50 px-6 py-3 text-sm text-emerald-900 sm:px-8">
             <Check className="h-4 w-4 flex-shrink-0" />
-            <p>For a clearer review, include what happened, when, where, and who was involved.</p>
+            <p>There is no wrong type of submission—simply choose a category and tell us what matters.</p>
           </div>
         </section>
 
-        <section className="mb-6 rounded-2xl border border-green-100 bg-white p-6 shadow-sm sm:p-8">
+        <section className="mb-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_14px_40px_-28px_rgba(15,23,42,0.25)] sm:p-8">
           <AnonymousReportForm />
         </section>
 
@@ -78,7 +78,7 @@ export default function SubmitPage() {
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div>
               <h3 className="mb-2 font-semibold text-gray-900">Can I report anonymously?</h3>
-              <p className="text-sm leading-relaxed text-gray-600">Yes. Email, phone number, and department are optional. Only enter personal details you choose to provide.</p>
+              <p className="text-sm leading-relaxed text-gray-600">Yes. This form does not ask for your name or contact information.</p>
             </div>
             <div>
               <h3 className="mb-2 font-semibold text-gray-900">How do I track my report?</h3>
