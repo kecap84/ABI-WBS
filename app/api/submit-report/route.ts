@@ -6,7 +6,8 @@ import { eq } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 
 const MAX_FILES = 3
-const MAX_FILE_SIZE = 5 * 1024 * 1024
+const MAX_IMAGE_SIZE = 3 * 1024 * 1024
+const MAX_PDF_SIZE = 2 * 1024 * 1024
 const ALLOWED_FILE_TYPES = new Set([
   'image/jpeg',
   'image/png',
@@ -16,6 +17,10 @@ const ALLOWED_FILE_TYPES = new Set([
 
 function sanitizeFileName(fileName: string) {
   return fileName.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-100)
+}
+
+function getMaximumFileSize(fileType: string) {
+  return fileType === 'application/pdf' ? MAX_PDF_SIZE : MAX_IMAGE_SIZE
 }
 
 function generateTrackingCode(): string {
@@ -79,9 +84,9 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         )
       }
-      if (file.size > MAX_FILE_SIZE) {
+      if (file.size > getMaximumFileSize(file.type)) {
         return NextResponse.json(
-          { success: false, error: `${file.name} exceeds the 5 MB limit` },
+          { success: false, error: `${file.name} exceeds the ${file.type === 'application/pdf' ? '2 MB PDF' : '3 MB image'} limit` },
           { status: 400 }
         )
       }

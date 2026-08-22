@@ -4,7 +4,8 @@ import { db } from '@/lib/db'
 import { reportAttachments, reports } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024
+const MAX_IMAGE_SIZE = 3 * 1024 * 1024
+const MAX_PDF_SIZE = 2 * 1024 * 1024
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
 
 interface EvidencePayload {
@@ -13,6 +14,11 @@ interface EvidencePayload {
   trackingCode: string
   originalName: string
   fileSize: number
+  fileType: string
+}
+
+function getMaximumFileSize(fileType: string) {
+  return fileType === 'application/pdf' ? MAX_PDF_SIZE : MAX_IMAGE_SIZE
 }
 
 export async function POST(request: Request) {
@@ -35,9 +41,10 @@ export async function POST(request: Request) {
           !payload.reportId ||
           !payload.trackingCode ||
           !payload.originalName ||
+          !ALLOWED_FILE_TYPES.includes(payload.fileType) ||
           !Number.isFinite(payload.fileSize) ||
           payload.fileSize <= 0 ||
-          payload.fileSize > MAX_FILE_SIZE
+          payload.fileSize > getMaximumFileSize(payload.fileType)
         ) {
           throw new Error('Invalid evidence metadata')
         }
@@ -63,8 +70,8 @@ export async function POST(request: Request) {
         if (existingAttachments.length >= 3) throw new Error('Maximum evidence file count reached')
 
         return {
-          allowedContentTypes: ALLOWED_FILE_TYPES,
-          maximumSizeInBytes: MAX_FILE_SIZE,
+          allowedContentTypes: [payload.fileType],
+          maximumSizeInBytes: getMaximumFileSize(payload.fileType),
           addRandomSuffix: true,
           cacheControlMaxAge: 60,
           validUntil: Date.now() + 10 * 60 * 1000,

@@ -5,8 +5,13 @@ import { CheckCircle2, AlertCircle, Copy, Paperclip, X } from 'lucide-react'
 import { upload } from '@vercel/blob/client'
 
 const MAX_FILES = 3
-const MAX_FILE_SIZE = 5 * 1024 * 1024
+const MAX_IMAGE_SIZE = 3 * 1024 * 1024
+const MAX_PDF_SIZE = 2 * 1024 * 1024
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+
+function getMaximumFileSize(fileType: string) {
+  return fileType === 'application/pdf' ? MAX_PDF_SIZE : MAX_IMAGE_SIZE
+}
 
 const CATEGORIES = [
   'Employee Feedback',
@@ -92,6 +97,7 @@ export function AnonymousReportForm() {
                 trackingCode: result.trackingCode,
                 originalName: file.name,
                 fileSize: file.size,
+                fileType: file.type,
               }),
             })
           } catch {
@@ -132,14 +138,14 @@ export function AnonymousReportForm() {
     }
 
     const invalidFile = selectedFiles.find(
-      file => !ALLOWED_FILE_TYPES.includes(file.type) || file.size > MAX_FILE_SIZE
+      file => !ALLOWED_FILE_TYPES.includes(file.type) || file.size > getMaximumFileSize(file.type)
     )
 
     if (invalidFile) {
       setError(
         !ALLOWED_FILE_TYPES.includes(invalidFile.type)
           ? `${invalidFile.name} has an unsupported file type`
-          : `${invalidFile.name} exceeds the 5 MB limit`
+          : `${invalidFile.name} exceeds the ${invalidFile.type === 'application/pdf' ? '2 MB PDF' : '3 MB image'} limit`
       )
       return
     }
@@ -284,7 +290,7 @@ export function AnonymousReportForm() {
           onChange={handleEvidenceChange}
           className="sr-only"
         />
-        <p className="text-xs text-gray-500 mt-2">Maximum 3 files, 5 MB each. JPG, PNG, WEBP, or PDF.</p>
+        <p className="text-xs text-gray-500 mt-2">Maximum 3 files. Images up to 3 MB; PDF up to 2 MB.</p>
 
         {evidenceFiles.length > 0 && (
           <div className="mt-3 space-y-2">

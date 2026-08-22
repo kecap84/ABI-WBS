@@ -86,7 +86,7 @@ export default function SubmitPage() {
             </div>
             <div>
               <h3 className="mb-2 font-semibold text-gray-900">What evidence can I attach?</h3>
-              <p className="text-sm leading-relaxed text-gray-600">You can attach up to three JPG, PNG, WEBP, or PDF files, with a maximum size of 5 MB per file.</p>
+              <p className="text-sm leading-relaxed text-gray-600">You can attach up to three files. JPG, PNG, or WEBP images can be up to 3 MB; PDF files up to 2 MB.</p>
             </div>
             <div>
               <h3 className="mb-2 font-semibold text-gray-900">What happens after submission?</h3>
