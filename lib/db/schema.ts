@@ -54,11 +54,14 @@ export const reportAttachments = pgTable(
     fileUrl: text('fileurl').notNull(),
     fileType: text('filetype'),
     fileSize: integer('filesize').notNull().default(0),
+    messageId: text('messageid'),
+    sender: text('sender').notNull().default('reporter'),
     uploadedAt: timestamp('uploadedat').notNull().defaultNow(),
     createdAt: timestamp('createdat').notNull().defaultNow(),
   },
   (table) => ({
     reportIdIdx: index('report_attachments_reportid_idx').on(table.reportId),
+    messageIdIdx: index('report_attachments_messageid_idx').on(table.messageId),
   })
 )
 

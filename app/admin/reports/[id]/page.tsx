@@ -35,6 +35,8 @@ interface Attachment {
   fileType?: string | null
   fileSize: number
   uploadedAt: string
+  messageId?: string | null
+  sender?: 'admin' | 'reporter'
 }
 
 export default function AdminReportDetail() {
@@ -54,6 +56,7 @@ export default function AdminReportDetail() {
   const [messageText, setMessageText] = useState('')
   const [requestInformation, setRequestInformation] = useState(false)
   const [sendingMessage, setSendingMessage] = useState(false)
+  const [messageFiles, setMessageFiles] = useState<File[]>([])
   const [preview, setPreview] = useState<{ url: string; type: string; name: string } | null>(null)
 
   useEffect(() => {
@@ -110,7 +113,7 @@ export default function AdminReportDetail() {
   }
 
   const handleSendMessage = async () => {
-    if (!messageText.trim()) return
+    if (!messageText.trim() && messageFiles.length === 0) return
 
     try {
       setSendingMessage(true)
@@ -122,12 +125,27 @@ export default function AdminReportDetail() {
           'Content-Type': 'application/json',
           'x-admin-token': token || '',
         },
-        body: JSON.stringify({ reportId, message: messageText, requestInformation }),
+        body: JSON.stringify({ reportId, message: messageText, requestInformation, hasAttachments: messageFiles.length > 0 }),
       })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Failed to send message')
 
+      if (messageFiles.length > 0) {
+        const uploadData = new FormData()
+        uploadData.append('reportId', reportId)
+        uploadData.append('messageId', data.messageId)
+        messageFiles.forEach((file) => uploadData.append('files', file))
+        const uploadResponse = await fetch('/api/conversation-attachments', {
+          method: 'POST',
+          headers: { 'x-admin-token': token || '' },
+          body: uploadData,
+        })
+        const uploadResult = await uploadResponse.json()
+        if (!uploadResponse.ok) throw new Error(uploadResult.error || 'Failed to upload attachments')
+      }
+
       setMessageText('')
+      setMessageFiles([])
       setRequestInformation(false)
       setStatus(data.status)
       await loadReport()
@@ -136,6 +154,28 @@ export default function AdminReportDetail() {
     } finally {
       setSendingMessage(false)
     }
+  }
+
+  const handleMessageFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(event.target.files || [])
+    event.target.value = ''
+    if (messageFiles.length + selected.length > 3) {
+      setError('Maximum 3 files are allowed per message')
+      return
+    }
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+    const invalid = selected.find((file) => {
+      const limit = file.type === 'application/pdf' ? 2 * 1024 * 1024 : 3 * 1024 * 1024
+      return !allowedTypes.includes(file.type) || file.size > limit
+    })
+    if (invalid) {
+      setError(!allowedTypes.includes(invalid.type)
+        ? `${invalid.name} has an unsupported file type`
+        : `${invalid.name} exceeds the ${invalid.type === 'application/pdf' ? '2 MB PDF' : '3 MB image'} limit`)
+      return
+    }
+    setError('')
+    setMessageFiles((files) => [...files, ...selected])
   }
 
   const downloadAttachment = async (attachment: Attachment) => {
@@ -344,11 +384,11 @@ export default function AdminReportDetail() {
                 <Paperclip className="w-5 h-5 text-blue-300" />
                 <h2 className="text-lg font-semibold text-white">Evidence</h2>
               </div>
-              {attachments.length === 0 ? (
+              {attachments.filter((attachment) => !attachment.messageId).length === 0 ? (
                 <p className="text-sm text-blue-200">No evidence was attached.</p>
               ) : (
                 <div className="space-y-2">
-                  {attachments.map((attachment) => (
+                  {attachments.filter((attachment) => !attachment.messageId).map((attachment) => (
                     <div key={attachment.id} className="flex items-center gap-2 bg-white/10 border border-white/10 rounded-lg p-2">
                       <button
                         type="button"
@@ -391,7 +431,18 @@ export default function AdminReportDetail() {
                       <span className="text-xs font-semibold text-white">{message.sender === 'admin' ? 'Admin' : 'Reporter'}</span>
                       <span className="text-xs text-blue-200">{new Date(message.createdAt).toLocaleString()}</span>
                     </div>
-                    <p className="text-sm text-white whitespace-pre-wrap break-words">{message.comment}</p>
+                    {message.comment && <p className="text-sm text-white whitespace-pre-wrap break-words">{message.comment}</p>}
+                    {attachments.filter((attachment) => attachment.messageId === message.id).map((attachment) => (
+                      <div key={attachment.id} className="mt-2 flex items-center gap-2 rounded-lg border border-white/15 bg-slate-950/30 p-2">
+                        <button type="button" onClick={() => previewAttachment(attachment)} className="min-w-0 flex-1 text-left">
+                          <p className="truncate text-xs font-semibold text-white">📎 {attachment.fileName}</p>
+                          <p className="text-[11px] text-blue-200">{(attachment.fileSize / 1024 / 1024).toFixed(2)} MB · Preview</p>
+                        </button>
+                        <button type="button" onClick={() => downloadAttachment(attachment)} className="rounded p-1.5 text-blue-200 hover:bg-white/10" aria-label={`Download ${attachment.fileName}`}>
+                          <Download className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>
@@ -404,6 +455,23 @@ export default function AdminReportDetail() {
                 maxLength={5000}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none"
               />
+              <div className="mt-2 flex flex-wrap gap-2">
+                {messageFiles.map((file, index) => (
+                  <span key={`${file.name}-${file.lastModified}`} className="inline-flex max-w-full items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-xs text-white">
+                    <span className="max-w-52 truncate">{file.name}</span>
+                    <button type="button" onClick={() => setMessageFiles((files) => files.filter((_, fileIndex) => fileIndex !== index))} aria-label={`Remove ${file.name}`}>
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-blue-400/50 bg-white/10 px-3 py-2 text-sm font-semibold text-blue-100 hover:bg-white/15">
+                  <Paperclip className="h-4 w-4" /> Add files
+                  <input type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf" onChange={handleMessageFiles} className="sr-only" />
+                </label>
+                <span className="text-xs text-blue-200">Images 3 MB · PDF 2 MB · max 3 files</span>
+              </div>
               <label className="flex items-start gap-2 mt-3 text-sm text-blue-100 cursor-pointer">
                 <input
                   type="checkbox"
@@ -416,7 +484,7 @@ export default function AdminReportDetail() {
               <button
                 type="button"
                 onClick={handleSendMessage}
-                disabled={sendingMessage || !messageText.trim()}
+                disabled={sendingMessage || (!messageText.trim() && messageFiles.length === 0) || report.status === 'closed'}
                 className="mt-4 inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-900 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-semibold transition"
               >
                 <Send className="w-4 h-4" />

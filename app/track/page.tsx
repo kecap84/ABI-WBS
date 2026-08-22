@@ -31,6 +31,7 @@ export default function TrackPage() {
   const [searched, setSearched] = useState(false)
   const [reply, setReply] = useState('')
   const [sendingReply, setSendingReply] = useState(false)
+  const [replyFiles, setReplyFiles] = useState<File[]>([])
   const [preview, setPreview] = useState<{ url: string; type: string; name: string } | null>(null)
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -61,7 +62,7 @@ export default function TrackPage() {
   }
 
   const handleSendReply = async () => {
-    if (!reply.trim() || !report) return
+    if ((!reply.trim() && replyFiles.length === 0) || !report) return
 
     try {
       setSendingReply(true)
@@ -69,19 +70,56 @@ export default function TrackPage() {
       const response = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trackingCode, message: reply }),
+        body: JSON.stringify({ trackingCode, message: reply, hasAttachments: replyFiles.length > 0 }),
       })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Failed to send reply')
 
+      if (replyFiles.length > 0) {
+        const uploadData = new FormData()
+        uploadData.append('reportId', report.id)
+        uploadData.append('messageId', data.messageId)
+        replyFiles.forEach((file) => uploadData.append('files', file))
+        const uploadResponse = await fetch('/api/conversation-attachments', {
+          method: 'POST',
+          headers: { 'x-tracking-code': trackingCode.toUpperCase() },
+          body: uploadData,
+        })
+        const uploadResult = await uploadResponse.json()
+        if (!uploadResponse.ok) throw new Error(uploadResult.error || 'Failed to upload attachments')
+      }
+
       const refreshedReport = await getReportByTrackingCode(trackingCode.toUpperCase())
       setReport(refreshedReport)
       setReply('')
+      setReplyFiles([])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send reply')
     } finally {
       setSendingReply(false)
     }
+  }
+
+  const handleReplyFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(event.target.files || [])
+    event.target.value = ''
+    if (replyFiles.length + selected.length > 3) {
+      setError('Maximum 3 files are allowed per message')
+      return
+    }
+    const invalid = selected.find((file) => {
+      const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(file.type)
+      const limit = file.type === 'application/pdf' ? 2 * 1024 * 1024 : 3 * 1024 * 1024
+      return !allowed || file.size > limit
+    })
+    if (invalid) {
+      setError(!['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(invalid.type)
+        ? `${invalid.name} has an unsupported file type`
+        : `${invalid.name} exceeds the ${invalid.type === 'application/pdf' ? '2 MB PDF' : '3 MB image'} limit`)
+      return
+    }
+    setError(null)
+    setReplyFiles((files) => [...files, ...selected])
   }
 
   const downloadAttachment = async (attachment: { id: string; fileName: string }) => {
@@ -251,14 +289,14 @@ export default function TrackPage() {
                   <p className="text-gray-700 whitespace-pre-wrap text-sm sm:text-base">{report.description}</p>
                 </div>
 
-                {report.attachments?.length > 0 && (
+                {report.attachments?.some((attachment: { messageId?: string | null }) => !attachment.messageId) && (
                   <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                     <div className="flex items-center gap-2 mb-3">
                       <Paperclip className="w-4 h-4 text-amber-700" />
                       <p className="text-sm text-amber-900 font-semibold">Submitted Evidence</p>
                     </div>
                     <div className="space-y-2">
-                      {report.attachments.map((attachment: { id: string; fileName: string; fileSize: number; fileType?: string | null }) => (
+                      {report.attachments.filter((attachment: { messageId?: string | null }) => !attachment.messageId).map((attachment: { id: string; fileName: string; fileSize: number; fileType?: string | null }) => (
                         <div key={attachment.id} className="flex items-center gap-2 bg-white border border-amber-200 rounded-lg p-2">
                           <button
                             type="button"
@@ -298,7 +336,18 @@ export default function TrackPage() {
                           <span className="text-xs font-semibold text-gray-900">{message.sender === 'reporter' ? 'You' : 'Admin'}</span>
                           <span className="text-xs text-gray-500">{new Date(message.createdAt).toLocaleString()}</span>
                         </div>
-                        <p className="text-sm text-gray-800 whitespace-pre-wrap break-words">{message.comment}</p>
+                        {message.comment && <p className="text-sm text-gray-800 whitespace-pre-wrap break-words">{message.comment}</p>}
+                        {report.attachments?.filter((attachment: { messageId?: string | null }) => attachment.messageId === message.id).map((attachment: { id: string; fileName: string; fileSize: number; fileType?: string | null }) => (
+                          <div key={attachment.id} className="mt-2 flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-2">
+                            <button type="button" onClick={() => previewAttachment(attachment)} className="min-w-0 flex-1 text-left">
+                              <p className="truncate text-xs font-semibold text-slate-800">📎 {attachment.fileName}</p>
+                              <p className="text-[11px] text-slate-500">{(attachment.fileSize / 1024 / 1024).toFixed(2)} MB · Preview</p>
+                            </button>
+                            <button type="button" onClick={() => downloadAttachment(attachment)} className="rounded p-1.5 text-blue-700 hover:bg-blue-50" aria-label={`Download ${attachment.fileName}`}>
+                              <Download className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     )) : (
                       <p className="text-sm text-blue-700">No messages yet.</p>
@@ -315,10 +364,27 @@ export default function TrackPage() {
                         maxLength={5000}
                         className="w-full px-4 py-3 border border-blue-200 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                       />
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {replyFiles.map((file, index) => (
+                          <span key={`${file.name}-${file.lastModified}`} className="inline-flex max-w-full items-center gap-2 rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs text-slate-700">
+                            <span className="max-w-52 truncate">{file.name}</span>
+                            <button type="button" onClick={() => setReplyFiles((files) => files.filter((_, fileIndex) => fileIndex !== index))} aria-label={`Remove ${file.name}`}>
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center gap-3">
+                        <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50">
+                          <Paperclip className="h-4 w-4" /> Add files
+                          <input type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf" onChange={handleReplyFiles} className="sr-only" />
+                        </label>
+                        <span className="text-xs text-blue-700">Images 3 MB · PDF 2 MB · max 3 files</span>
+                      </div>
                       <button
                         type="button"
                         onClick={handleSendReply}
-                        disabled={sendingReply || !reply.trim()}
+                        disabled={sendingReply || (!reply.trim() && replyFiles.length === 0)}
                         className="mt-3 inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-semibold transition"
                       >
                         <Send className="w-4 h-4" />

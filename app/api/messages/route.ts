@@ -6,12 +6,12 @@ import { nanoid } from 'nanoid'
 
 export async function POST(request: NextRequest) {
   try {
-    const { trackingCode, message } = await request.json()
+    const { trackingCode, message, hasAttachments } = await request.json()
     const normalizedCode = typeof trackingCode === 'string' ? trackingCode.trim().toUpperCase() : ''
     const normalizedMessage = typeof message === 'string' ? message.trim() : ''
 
-    if (!normalizedCode || !normalizedMessage) {
-      return NextResponse.json({ error: 'Tracking code and message are required' }, { status: 400 })
+    if (!normalizedCode || (!normalizedMessage && !hasAttachments)) {
+      return NextResponse.json({ error: 'Tracking code and a message or attachment are required' }, { status: 400 })
     }
     if (normalizedMessage.length > 5000) {
       return NextResponse.json({ error: 'Message cannot exceed 5000 characters' }, { status: 400 })
@@ -31,9 +31,10 @@ export async function POST(request: NextRequest) {
     }
 
     const now = new Date()
+    const messageId = nanoid()
     await db.transaction(async (tx) => {
       await tx.insert(reportComments).values({
-        id: nanoid(),
+        id: messageId,
         reportId: report[0].id,
         comment: normalizedMessage,
         sender: 'reporter',
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
       .where(eq(reportComments.reportId, report[0].id))
       .orderBy(asc(reportComments.createdAt))
 
-    return NextResponse.json({ success: true, messages, status: 'in_progress' })
+    return NextResponse.json({ success: true, messageId, messages, status: 'in_progress' })
   } catch (error) {
     console.error('[v0] Error posting reporter message:', error)
     return NextResponse.json({ error: 'Failed to send message' }, { status: 500 })

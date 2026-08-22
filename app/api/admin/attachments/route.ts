@@ -24,6 +24,8 @@ export async function GET(request: NextRequest) {
       fileName: reportAttachments.fileName,
       fileType: reportAttachments.fileType,
       fileSize: reportAttachments.fileSize,
+      messageId: reportAttachments.messageId,
+      sender: reportAttachments.sender,
       uploadedAt: reportAttachments.uploadedAt,
     })
     .from(reportAttachments)
