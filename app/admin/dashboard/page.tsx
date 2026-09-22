@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { LogOut, AlertCircle, Filter, Eye, Settings, Trash2 } from 'lucide-react'
+import { LogOut, AlertCircle, Bell, Filter, Eye, Settings, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -12,9 +12,8 @@ interface Report {
   title: string
   description: string
   category: string
-  severity: string
   status: string
-  reporterEmail?: string | null
+  unreadReplyCount: number
   reportDate: string
   adminNotes?: string | null
   createdAt: string
@@ -26,17 +25,17 @@ interface Stats {
   inProgress: number
   awaitingInformation: number
   resolved: number
+  newReplies: number
 }
 
 export default function AdminDashboard() {
   const router = useRouter()
   const [reports, setReports] = useState<Report[]>([])
-  const [stats, setStats] = useState<Stats>({ total: 0, open: 0, inProgress: 0, awaitingInformation: 0, resolved: 0 })
+  const [stats, setStats] = useState<Stats>({ total: 0, open: 0, inProgress: 0, awaitingInformation: 0, resolved: 0, newReplies: 0 })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
-  const [severityFilter, setSeverityFilter] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [deletingReportId, setDeletingReportId] = useState<string | null>(null)
 
@@ -48,7 +47,22 @@ export default function AdminDashboard() {
     if (reports.length > 0) {
       loadReports()
     }
-  }, [statusFilter, categoryFilter, severityFilter])
+  }, [statusFilter, categoryFilter])
+
+  useEffect(() => {
+    const refresh = () => loadReports(false)
+    const interval = window.setInterval(refresh, 30000)
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') refresh()
+    }
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => {
+      window.clearInterval(interval)
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [statusFilter, categoryFilter])
 
   const checkAuth = async () => {
     const token = localStorage.getItem('adminToken')
@@ -59,15 +73,14 @@ export default function AdminDashboard() {
     loadReports()
   }
 
-  const loadReports = async () => {
+  const loadReports = async (showLoading = true) => {
     try {
-      setLoading(true)
+      if (showLoading) setLoading(true)
       const token = localStorage.getItem('adminToken')
       
       const params = new URLSearchParams()
       if (statusFilter) params.append('status', statusFilter)
       if (categoryFilter) params.append('category', categoryFilter)
-      if (severityFilter) params.append('severity', severityFilter)
 
       const response = await fetch(`/api/admin/reports?${params}`, {
         headers: { 'x-admin-token': token || '' },
@@ -89,12 +102,13 @@ export default function AdminDashboard() {
         inProgress: data.reports.filter((r: Report) => r.status === 'in_progress').length,
         awaitingInformation: data.reports.filter((r: Report) => r.status === 'awaiting_information').length,
         resolved: data.reports.filter((r: Report) => r.status === 'resolved').length,
+        newReplies: data.totalUnreadReplies || 0,
       }
       setStats(stats)
     } catch (err) {
       setError('Failed to load reports')
     } finally {
-      setLoading(false)
+      if (showLoading) setLoading(false)
     }
   }
 
@@ -147,21 +161,6 @@ export default function AdminDashboard() {
     report.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     report.trackingCode.toLowerCase().includes(searchQuery.toLowerCase())
   )
-
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'critical':
-        return 'bg-red-900/20 text-red-200 border-red-800'
-      case 'high':
-        return 'bg-orange-900/20 text-orange-200 border-orange-800'
-      case 'medium':
-        return 'bg-yellow-900/20 text-yellow-200 border-yellow-800'
-      case 'low':
-        return 'bg-green-900/20 text-green-200 border-green-800'
-      default:
-        return 'bg-slate-900/20 text-slate-200 border-slate-800'
-    }
-  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -217,6 +216,15 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <div className="relative flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white" title="Unread reporter replies">
+              <Bell className="h-4 w-4" />
+              <span className="hidden sm:inline">New replies</span>
+              {stats.newReplies > 0 && (
+                <span className="min-w-5 rounded-full bg-amber-400 px-1.5 py-0.5 text-center text-xs font-bold text-slate-900">
+                  {stats.newReplies > 99 ? '99+' : stats.newReplies}
+                </span>
+              )}
+            </div>
             <Link
               href="/admin/settings"
               className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 rounded-lg transition transform hover:scale-105 text-sm sm:text-base"
@@ -237,7 +245,7 @@ export default function AdminDashboard() {
 
       {/* Stats */}
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
           <div className="bg-white/5 backdrop-blur border border-white/10 rounded-lg p-6 hover:bg-white/10 transition">
             <p className="text-blue-200 text-sm font-semibold">Total Reports</p>
             <p className="text-4xl font-bold text-white mt-2">{stats.total}</p>
@@ -258,6 +266,10 @@ export default function AdminDashboard() {
             <p className="text-green-200 text-sm font-semibold">Resolved</p>
             <p className="text-4xl font-bold text-green-100 mt-2">{stats.resolved}</p>
           </div>
+          <div className="bg-amber-500/10 backdrop-blur border border-amber-400/30 rounded-lg p-6 hover:bg-amber-500/20 transition">
+            <p className="text-amber-200 text-sm font-semibold">New Replies</p>
+            <p className="text-4xl font-bold text-amber-100 mt-2">{stats.newReplies}</p>
+          </div>
         </div>
 
         {/* Filters */}
@@ -267,7 +279,7 @@ export default function AdminDashboard() {
             <h2 className="text-lg font-semibold text-white">Filters & Search</h2>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-semibold text-white mb-2">
                 Search Reports
@@ -328,22 +340,6 @@ export default function AdminDashboard() {
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-white mb-2">
-                Severity
-              </label>
-              <select
-                value={severityFilter}
-                onChange={(e) => setSeverityFilter(e.target.value)}
-                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:ring-2 focus:ring-blue-400 focus:border-transparent focus:bg-white/20 appearance-none cursor-pointer"
-              >
-                <option value="" className="bg-slate-800 text-white">All Severity</option>
-                <option value="critical" className="bg-slate-800 text-white">Critical</option>
-                <option value="high" className="bg-slate-800 text-white">High</option>
-                <option value="medium" className="bg-slate-800 text-white">Medium</option>
-                <option value="low" className="bg-slate-800 text-white">Low</option>
-              </select>
-            </div>
           </div>
         </div>
 
@@ -379,7 +375,7 @@ export default function AdminDashboard() {
                       Category
                     </th>
                     <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-blue-200">
-                      Severity
+                      Replies
                     </th>
                     <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-blue-200">
                       Status
@@ -396,7 +392,7 @@ export default function AdminDashboard() {
                   {filteredReports.map((report) => (
                     <tr
                       key={report.id}
-                      className="border-b border-white/5 hover:bg-white/10 transition"
+                      className={`border-b border-white/5 transition ${report.unreadReplyCount > 0 ? 'bg-amber-400/10 hover:bg-amber-400/15' : 'hover:bg-white/10'}`}
                     >
                       <td className="px-4 sm:px-6 py-4 text-xs sm:text-sm font-mono text-blue-300">
                         {report.trackingCode}
@@ -408,13 +404,13 @@ export default function AdminDashboard() {
                         {report.category}
                       </td>
                       <td className="px-4 sm:px-6 py-4 text-xs sm:text-sm">
-                        <span
-                          className={`px-2 py-1 rounded border text-xs font-semibold ${getSeverityColor(
-                            report.severity
-                          )}`}
-                        >
-                          {report.severity.charAt(0).toUpperCase() + report.severity.slice(1)}
-                        </span>
+                        {report.unreadReplyCount > 0 ? (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-amber-300/40 bg-amber-400/20 px-2 py-1 text-xs font-bold text-amber-100">
+                            <Bell className="h-3 w-3" /> {report.unreadReplyCount} new
+                          </span>
+                        ) : (
+                          <span className="text-xs text-blue-200/70">—</span>
+                        )}
                       </td>
                       <td className="px-4 sm:px-6 py-4 text-xs sm:text-sm">
                         <span

@@ -74,6 +74,7 @@ export const reportComments = pgTable(
       .references(() => reports.id, { onDelete: 'cascade' }),
     comment: text('comment').notNull(),
     sender: text('sender').notNull().default('admin'),
+    adminReadAt: timestamp('adminreadat'),
     createdAt: timestamp('createdat').notNull().defaultNow(),
     updatedAt: timestamp('updatedat').notNull().defaultNow(),
   },

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { reportAttachments, reports } from '@/lib/db/schema'
-import { eq, sql } from 'drizzle-orm'
+import { reportAttachments, reportComments, reports } from '@/lib/db/schema'
+import { and, eq, isNull, sql } from 'drizzle-orm'
 import { del } from '@vercel/blob'
 
 // Simple admin token validation (in production, use proper auth)
@@ -20,7 +20,6 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status')
     const category = searchParams.get('category')
-    const severity = searchParams.get('severity')
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
 
@@ -34,7 +33,6 @@ export async function GET(req: NextRequest) {
       filters.push(sql`status = ${status}`)
     }
     if (category) filters.push(sql`category = ${category}`)
-    if (severity) filters.push(sql`severity = ${severity}`)
 
     if (filters.length > 0) {
       const whereClause = sql.join(filters, sql` AND `)
@@ -51,14 +49,36 @@ export async function GET(req: NextRequest) {
       .select({ count: sql<number>`COUNT(*)` })
       .from(reports)
 
+    const unreadRows = await db
+      .select({
+        reportId: reportComments.reportId,
+        count: sql<number>`COUNT(*)::int`,
+      })
+      .from(reportComments)
+      .where(and(
+        eq(reportComments.sender, 'reporter'),
+        isNull(reportComments.adminReadAt)
+      ))
+      .groupBy(reportComments.reportId)
+
+    const unreadByReport = new Map(
+      unreadRows.map((row) => [row.reportId, Number(row.count)])
+    )
+    const totalUnreadReplies = unreadRows.reduce(
+      (total, row) => total + Number(row.count),
+      0
+    )
+
     const normalizedReports = allReports.map((report) => ({
       ...report,
       status: report.status === 'investigating' ? 'in_progress' : report.status,
+      unreadReplyCount: unreadByReport.get(report.id) || 0,
     }))
 
     return NextResponse.json({
       reports: normalizedReports,
       total: countResult[0]?.count || 0,
+      totalUnreadReplies,
       limit,
       offset,
     })

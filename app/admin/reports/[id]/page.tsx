@@ -11,12 +11,8 @@ interface Report {
   title: string
   description: string
   category: string
-  severity: string
-  department?: string | null
   status: string
   adminNotes?: string | null
-  reporterEmail?: string | null
-  reporterPhone?: string | null
   reportDate: string
   createdAt: string
   updatedAt: string
@@ -97,6 +93,14 @@ export default function AdminReportDetail() {
         if (messagesResponse.ok) {
           const messagesData = await messagesResponse.json()
           setMessages(messagesData.messages || [])
+          await fetch('/api/admin/messages', {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-admin-token': token,
+            },
+            body: JSON.stringify({ reportId }),
+          })
         }
         if (attachmentsResponse.ok) {
           const attachmentsData = await attachmentsResponse.json()
@@ -275,21 +279,6 @@ export default function AdminReportDetail() {
     }
   }
 
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'critical':
-        return 'text-red-400'
-      case 'high':
-        return 'text-orange-400'
-      case 'medium':
-        return 'text-yellow-400'
-      case 'low':
-        return 'text-green-400'
-      default:
-        return 'text-slate-400'
-    }
-  }
-
   if (loading) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
@@ -338,9 +327,6 @@ export default function AdminReportDetail() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <div className={`px-3 py-2 rounded border text-sm font-semibold ${getSeverityColor(report.severity)}`}>
-                {report.severity.charAt(0).toUpperCase() + report.severity.slice(1)}
-              </div>
               <button
                 onClick={handleSave}
                 disabled={saving}
@@ -514,18 +500,6 @@ export default function AdminReportDetail() {
                 <div>
                   <p className="text-xs font-semibold text-blue-300 uppercase tracking-wider">Category</p>
                   <p className="text-white mt-2">{report.category}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-blue-300 uppercase tracking-wider">Department</p>
-                  <p className="text-white mt-2">{report.department || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-blue-300 uppercase tracking-wider">Reporter Email</p>
-                  <p className="text-white mt-2 break-all">{report.reporterEmail || '-'}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-blue-300 uppercase tracking-wider">Reporter Phone</p>
-                  <p className="text-white mt-2">{report.reporterPhone || '-'}</p>
                 </div>
               </div>
             </div>

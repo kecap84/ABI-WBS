@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { reportComments, reports } from '@/lib/db/schema'
-import { asc, eq } from 'drizzle-orm'
+import { and, asc, eq, isNull } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 
 function validateAdminToken(req: NextRequest) {
@@ -71,5 +71,32 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[v0] Error posting admin message:', error)
     return NextResponse.json({ error: 'Failed to send message' }, { status: 500 })
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  if (!validateAdminToken(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const { reportId } = await request.json()
+    if (typeof reportId !== 'string' || !reportId.trim()) {
+      return NextResponse.json({ error: 'Report ID is required' }, { status: 400 })
+    }
+
+    await db
+      .update(reportComments)
+      .set({ adminReadAt: new Date() })
+      .where(and(
+        eq(reportComments.reportId, reportId),
+        eq(reportComments.sender, 'reporter'),
+        isNull(reportComments.adminReadAt)
+      ))
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('[v0] Error marking reporter messages as read:', error)
+    return NextResponse.json({ error: 'Failed to mark messages as read' }, { status: 500 })
   }
 }
