@@ -48,14 +48,16 @@ export default function TrackPage() {
     }
 
     try {
-      const foundReport = await getReportByTrackingCode(trackingCode.toUpperCase())
+      const normalizedTrackingCode = trackingCode.trim().toUpperCase()
+      const foundReport = await getReportByTrackingCode(normalizedTrackingCode)
       if (foundReport) {
+        setTrackingCode(normalizedTrackingCode)
         setReport(foundReport)
       } else {
         setError('Tracking code not found. Please ensure you entered the correct code.')
       }
     } catch (err) {
-      setError('An error occurred while searching for the report')
+      setError('The report service is temporarily unavailable. Please try again shortly.')
     } finally {
       setLoading(false)
     }

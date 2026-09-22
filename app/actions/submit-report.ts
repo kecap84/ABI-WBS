@@ -65,10 +65,13 @@ export async function submitReport(params: SubmitReportParams) {
 
 export async function getReportByTrackingCode(trackingCode: string) {
   try {
+    const normalizedTrackingCode = trackingCode.trim().toUpperCase()
+    if (!normalizedTrackingCode) return null
+
     const report = await db
       .select()
       .from(reports)
-      .where(eq(reports.trackingCode, trackingCode))
+      .where(eq(reports.trackingCode, normalizedTrackingCode))
       .limit(1)
 
     if (!report || report.length === 0) {
@@ -101,7 +104,7 @@ export async function getReportByTrackingCode(trackingCode: string) {
     }
   } catch (error) {
     console.error('[v0] Error fetching report:', error)
-    return null
+    throw new Error('Unable to load the report right now')
   }
 }
 
